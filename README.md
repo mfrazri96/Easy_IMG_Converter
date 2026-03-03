@@ -17,10 +17,10 @@ Convert or enhance one image or many images in bulk, with live queue status and 
   - TIFF (`.tiff`)
   - GIF (`.gif`)
   - ICO (`.ico`)
-- `Mode: Enhance` (super-resolution with OpenCV DNN SuperRes):
-  - model type selection (`EDSR`, `ESPCN`, `FSRCNN`, `LapSRN`)
-  - upscaling selection (`x2`, `x3`, `x4`)
-  - optional blur-check gate before enhancement
+- `Mode: Enhance` (Real-ESRGAN):
+  - model selection (`RealESRGAN_x4plus`, `RealESRGAN_x2plus`, `RealESRGAN_x4plus_anime_6B`)
+  - output scaling (`x2`, `x4`)
+  - weights file selection (`.pth`)
   - output naming pattern: `filename_enhanced_<model>_x<scale>.png`
 - Queue table columns:
   - File name
@@ -38,7 +38,9 @@ Convert or enhance one image or many images in bulk, with live queue status and 
 
 - Python 3.9+ (recommended)
 - Pillow
-- opencv-contrib-python (for `cv2.dnn_superres`)
+- OpenCV (`opencv-python`)
+- PyTorch (`torch`)
+- Real-ESRGAN (`realesrgan`, `basicsr`)
 - Tkinter (included with most standard Python installs)
 
 Install dependency:
@@ -74,9 +76,8 @@ python -m unittest discover -s tests
    - choose **Target Format**
    - (optional) set **Quality** for JPEG/WEBP
 5. If in `Enhance` mode:
-   - choose **SR Model** and **Scale**
-   - pick the model `.pb` file path
-   - (optional) enable **Enhance only blurry images** and set threshold
+   - choose **Real-ESRGAN Model** and **Output Scale**
+   - pick the weights `.pth` file path
 6. Select the **Output Folder**.
 7. Click **Start Conversion** or **Start Enhancement**.
 8. Click **Open Output Folder** to view outputs.
@@ -89,8 +90,9 @@ python -m unittest discover -s tests
   - `photo.png`
   - `photo_1.png`
   - `photo_2.png`
-- Enhancement requires a matching `.pb` model file for the selected model/scale.
-- For enhancement, install `opencv-contrib-python` (plain `opencv-python` is not enough).
+- Enhancement requires matching Real-ESRGAN `.pth` weights for the selected model.
+- Recommended default weights path:
+  `weights/RealESRGAN_x4plus.pth`
 - **Open Output Folder** uses `os.startfile`, so it works on Windows.
 
 ## Project Structure

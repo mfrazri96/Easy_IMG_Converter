@@ -9,11 +9,10 @@ from PIL import Image, ImageTk
 from easy_img_converter.config.constants import (
     APP_TITLE,
     COLORS,
-    DEFAULT_MODEL_PATH,
+    DEFAULT_REALESRGAN_WEIGHTS,
     FORMAT_MAP,
     MIN_WINDOW_SIZE,
-    SR_MODELS,
-    SR_SCALES,
+    REALESRGAN_MODELS,
     WINDOW_SIZE,
 )
 from easy_img_converter.features.converter import process_convert
@@ -47,11 +46,9 @@ class MainWindow:
         self.target_format = tk.StringVar(value="PNG (.png)")
         self.quality = tk.IntVar(value=95)
 
-        self.sr_model_name = tk.StringVar(value="EDSR")
-        self.enhance_scale = tk.IntVar(value=2)
-        self.model_path = tk.StringVar(value=str(DEFAULT_MODEL_PATH))
-        self.auto_check_blur = tk.BooleanVar(value=True)
-        self.blur_threshold = tk.DoubleVar(value=100.0)
+        self.sr_model_name = tk.StringVar(value="RealESRGAN_x4plus")
+        self.enhance_scale = tk.IntVar(value=4)
+        self.model_path = tk.StringVar(value=str(DEFAULT_REALESRGAN_WEIGHTS))
 
         self.status_text = tk.StringVar(value="Ready")
         self.progress_text = tk.StringVar(value="0 / 0")
@@ -135,6 +132,7 @@ class MainWindow:
         self._build_left_panel(workspace)
         self._build_right_panel(workspace)
         self._apply_mode_to_ui()
+        self._sync_model_path_with_selection(force=True)
 
     def _build_left_panel(self, parent):
         left_card = ttk.Frame(parent, style="Card.TFrame", padding=14)
@@ -253,38 +251,28 @@ class MainWindow:
         self.enhance_frame.grid(row=3, column=0, columnspan=3, sticky="we", pady=(8, 0))
         self.enhance_frame.columnconfigure(1, weight=1)
 
-        ttk.Label(self.enhance_frame, text="SR Model", style="Info.TLabel").grid(row=0, column=0, sticky="w", pady=(0, 4))
+        ttk.Label(self.enhance_frame, text="Real-ESRGAN Model", style="Info.TLabel").grid(row=0, column=0, sticky="w", pady=(0, 4))
         model_combo = ttk.Combobox(
             self.enhance_frame,
             textvariable=self.sr_model_name,
-            values=SR_MODELS,
+            values=REALESRGAN_MODELS,
             state="readonly",
-            width=12,
+            width=24,
         )
         model_combo.grid(row=0, column=1, sticky="w", pady=(0, 4))
+        model_combo.bind("<<ComboboxSelected>>", self.on_enhance_selection_change)
 
-        ttk.Label(self.enhance_frame, text="Scale", style="Info.TLabel").grid(row=1, column=0, sticky="w", pady=(0, 4))
-        ttk.Combobox(self.enhance_frame, textvariable=self.enhance_scale, values=SR_SCALES, state="readonly", width=10).grid(
+        ttk.Label(self.enhance_frame, text="Output Scale", style="Info.TLabel").grid(row=1, column=0, sticky="w", pady=(0, 4))
+        scale_combo = ttk.Combobox(self.enhance_frame, textvariable=self.enhance_scale, values=[2, 4], state="readonly", width=10)
+        scale_combo.grid(
             row=1, column=1, sticky="w", pady=(0, 4)
         )
+        scale_combo.bind("<<ComboboxSelected>>", self.on_enhance_scale_change)
 
-        ttk.Label(self.enhance_frame, text="Model .pb path", style="Info.TLabel").grid(row=2, column=0, sticky="w", pady=(0, 4))
+        ttk.Label(self.enhance_frame, text="Weights .pth path", style="Info.TLabel").grid(row=2, column=0, sticky="w", pady=(0, 4))
         ttk.Entry(self.enhance_frame, textvariable=self.model_path).grid(row=2, column=1, sticky="we", pady=(0, 4))
         ttk.Button(self.enhance_frame, text="Browse", command=self.select_model_file, style="Soft.TButton").grid(
             row=2, column=2, padx=(8, 0), pady=(0, 4)
-        )
-
-        ttk.Checkbutton(
-            self.enhance_frame,
-            text="Enhance only blurry images",
-            variable=self.auto_check_blur,
-            onvalue=True,
-            offvalue=False,
-        ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(0, 4))
-
-        ttk.Label(self.enhance_frame, text="Blur threshold", style="Info.TLabel").grid(row=4, column=0, sticky="w")
-        ttk.Spinbox(self.enhance_frame, from_=1.0, to=1000.0, increment=1.0, textvariable=self.blur_threshold, width=8).grid(
-            row=4, column=1, sticky="w"
         )
 
         ttk.Label(settings_card, text="Output Folder", style="Info.TLabel").grid(row=4, column=0, sticky="w", pady=(8, 4))
@@ -381,11 +369,30 @@ class MainWindow:
 
     def select_model_file(self):
         file_path = filedialog.askopenfilename(
-            title="Select super-resolution model (.pb)",
-            filetypes=[("PB model", "*.pb"), ("All files", "*.*")],
+            title="Select Real-ESRGAN weights (.pth)",
+            filetypes=[("PTH weights", "*.pth"), ("All files", "*.*")],
         )
         if file_path:
             self.model_path.set(file_path)
+
+    def _suggest_model_path(self):
+        model_name = self.sr_model_name.get()
+        project_root = Path.cwd()
+        return project_root / "weights" / f"{model_name}.pth"
+
+    def _sync_model_path_with_selection(self, force=False):
+        suggested = self._suggest_model_path()
+        current = Path(self.model_path.get()).expanduser() if self.model_path.get().strip() else None
+
+        if force:
+            self.model_path.set(str(suggested))
+            return
+
+        if current is None or current.name.startswith(self.sr_model_name.get()):
+            if suggested.exists():
+                self.model_path.set(str(suggested))
+            elif current is None:
+                self.model_path.set(str(suggested))
 
     def open_output_folder(self):
         output_dir = self.last_output_dir or self.output_folder.get().strip()
@@ -401,6 +408,23 @@ class MainWindow:
     def on_target_change(self, _event=None):
         if self.mode.get() == "Convert":
             self._refresh_target_column()
+
+    def on_enhance_selection_change(self, _event=None):
+        model_name = self.sr_model_name.get()
+        if "x2plus" in model_name:
+            self.enhance_scale.set(2)
+        else:
+            self.enhance_scale.set(4)
+        self._sync_model_path_with_selection(force=False)
+
+    def on_enhance_scale_change(self, _event=None):
+        # Keep model scale coherent with the selected output scale.
+        if int(self.enhance_scale.get()) == 2 and self.sr_model_name.get() != "RealESRGAN_x2plus":
+            self.sr_model_name.set("RealESRGAN_x2plus")
+            self._sync_model_path_with_selection(force=False)
+        elif int(self.enhance_scale.get()) == 4 and self.sr_model_name.get() == "RealESRGAN_x2plus":
+            self.sr_model_name.set("RealESRGAN_x4plus")
+            self._sync_model_path_with_selection(force=False)
 
     def _apply_mode_to_ui(self):
         if self.mode.get() == "Convert":
@@ -499,11 +523,13 @@ class MainWindow:
         upsampler = None
         if mode == "Enhance":
             try:
-                validate_enhance_ready(self.model_path.get().strip())
+                validate_enhance_ready(
+                    weights_path=self.model_path.get().strip(),
+                    model_name=self.sr_model_name.get(),
+                )
                 upsampler = build_upsampler(
-                    self.model_path.get().strip(),
-                    self.sr_model_name.get(),
-                    int(self.enhance_scale.get()),
+                    weights_path=self.model_path.get().strip(),
+                    model_name=self.sr_model_name.get(),
                 )
             except Exception as exc:
                 messagebox.showerror("Enhancement Setup Error", str(exc))
@@ -543,9 +569,7 @@ class MainWindow:
                         output_dir=output_dir,
                         upsampler=upsampler,
                         model_name=self.sr_model_name.get(),
-                        scale=int(self.enhance_scale.get()),
-                        auto_check_blur=self.auto_check_blur.get(),
-                        blur_threshold=float(self.blur_threshold.get()),
+                        outscale=int(self.enhance_scale.get()),
                     )
                     if result == "skipped":
                         skipped += 1

@@ -1,2 +1,5 @@
 pillow
-opencv-contrib-python
+opencv-python
+torch
+realesrgan
+basicsr

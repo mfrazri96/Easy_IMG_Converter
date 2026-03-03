@@ -3,7 +3,7 @@ from pathlib import Path
 APP_TITLE = "Easy IMG Converter"
 WINDOW_SIZE = "1120x700"
 MIN_WINDOW_SIZE = (1000, 640)
-DEFAULT_MODEL_PATH = Path.cwd() / "EDSR_x2.pb"
+DEFAULT_REALESRGAN_WEIGHTS = Path.cwd() / "weights" / "RealESRGAN_x4plus.pth"
 
 COLORS = {
     "bg": "#f2f6fb",
@@ -30,5 +30,8 @@ FORMAT_MAP = {
     "ICO (.ico)": ("ICO", ".ico"),
 }
 
-SR_MODELS = ["EDSR", "ESPCN", "FSRCNN", "LapSRN"]
-SR_SCALES = [2, 3, 4]
+REALESRGAN_MODELS = [
+    "RealESRGAN_x4plus",
+    "RealESRGAN_x2plus",
+    "RealESRGAN_x4plus_anime_6B",
+]

@@ -1,5 +1,6 @@
 # Ignore converted images output folder
 Converted IMG/
+Sample Images/
 
 # Ignore Python cache
 __pycache__/

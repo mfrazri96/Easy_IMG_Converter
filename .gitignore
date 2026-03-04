@@ -2,6 +2,27 @@
 Converted IMG/
 Sample Images/
 
+# App runtime data
+web_app/app/data/
+Converted IMG/
+Output/
+Sample Images/
+
 # Ignore Python cache
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+
+# Model weights (large / licensed assets)
+Model/
+weights/
+*.pth
+*.pb
+
+# Logs
+*.log
+
+# Build / cache
+.pytest_cache/
+.mypy_cache/

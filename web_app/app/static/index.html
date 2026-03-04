@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Easy IMG Studio</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #142437;
+      --muted: #5a6d84;
+      --primary: #0f5fa8;
+      --accent: #ff7a18;
+      --border: #dce5f0;
+    }
+    body { font-family: "Segoe UI", sans-serif; background: var(--bg); margin: 0; color: var(--text); }
+    .wrap { max-width: 980px; margin: 24px auto; padding: 0 16px; }
+    .title { font-size: 30px; font-weight: 700; margin: 0; }
+    .sub { color: var(--muted); margin: 6px 0 18px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 13px; color: var(--muted); }
+    input, select, button { font-size: 14px; padding: 10px; border-radius: 8px; border: 1px solid var(--border); }
+    button { background: var(--primary); color: #fff; border: none; cursor: pointer; font-weight: 600; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .status { white-space: pre-wrap; font-family: Consolas, monospace; font-size: 13px; }
+    .outputs a { display: block; margin: 4px 0; color: var(--primary); }
+    @media (max-width: 760px) { .row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="title">Easy IMG Studio</h1>
+    <p class="sub">Web version for conversion + Real-ESRGAN enhancement (Docker-ready).</p>
+
+    <div class="card">
+      <div class="row">
+        <div class="field">
+          <label>Mode</label>
+          <select id="mode">
+            <option value="convert">Convert</option>
+            <option value="enhance">Enhance</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Images (single or bulk)</label>
+          <input id="files" type="file" multiple />
+        </div>
+      </div>
+
+      <div id="convertFields" class="row" style="margin-top: 12px;">
+        <div class="field">
+          <label>Target Format</label>
+          <select id="targetFormat">
+            <option>png</option><option>jpg</option><option>jpeg</option><option>webp</option>
+            <option>bmp</option><option>tiff</option><option>gif</option><option>ico</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Quality (JPEG/WEBP)</label>
+          <input id="quality" type="number" min="1" max="100" value="95" />
+        </div>
+      </div>
+
+      <div id="enhanceFields" class="row" style="margin-top: 12px; display:none;">
+        <div class="field">
+          <label>Real-ESRGAN Model</label>
+          <select id="modelName">
+            <option>RealESRGAN_x4plus</option>
+            <option>RealESRGAN_x2plus</option>
+            <option>RealESRGAN_x4plus_anime_6B</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Output Scale</label>
+          <select id="outscale">
+            <option value="2">2</option>
+            <option value="4" selected>4</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Tile Size (0 = full image)</label>
+          <input id="tile" type="number" min="0" value="400" />
+        </div>
+      </div>
+
+      <div style="margin-top: 12px;">
+        <button id="startBtn">Start Job</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="field">
+        <label>Status</label>
+        <div id="status" class="status">Idle</div>
+      </div>
+      <div class="field" style="margin-top: 10px;">
+        <label>Output Files</label>
+        <div id="outputs" class="outputs"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const modeEl = document.getElementById('mode');
+    const filesEl = document.getElementById('files');
+    const startBtn = document.getElementById('startBtn');
+    const statusEl = document.getElementById('status');
+    const outputsEl = document.getElementById('outputs');
+
+    const convertFields = document.getElementById('convertFields');
+    const enhanceFields = document.getElementById('enhanceFields');
+
+    modeEl.addEventListener('change', () => {
+      const m = modeEl.value;
+      convertFields.style.display = m === 'convert' ? 'grid' : 'none';
+      enhanceFields.style.display = m === 'enhance' ? 'grid' : 'none';
+    });
+
+    async function startJob() {
+      const files = filesEl.files;
+      if (!files.length) {
+        alert('Please choose at least one image file.');
+        return;
+      }
+
+      const mode = modeEl.value;
+      const form = new FormData();
+      for (const f of files) form.append('files', f);
+
+      let endpoint = '/api/jobs/convert';
+      if (mode === 'convert') {
+        form.append('target_format', document.getElementById('targetFormat').value);
+        form.append('quality', document.getElementById('quality').value);
+      } else {
+        endpoint = '/api/jobs/enhance';
+        form.append('model_name', document.getElementById('modelName').value);
+        form.append('outscale', document.getElementById('outscale').value);
+        form.append('tile', document.getElementById('tile').value);
+      }
+
+      startBtn.disabled = true;
+      outputsEl.innerHTML = '';
+      statusEl.textContent = 'Submitting...';
+
+      const res = await fetch(endpoint, { method: 'POST', body: form });
+      if (!res.ok) {
+        const err = await res.text();
+        statusEl.textContent = `Failed to start job: ${err}`;
+        startBtn.disabled = false;
+        return;
+      }
+
+      const data = await res.json();
+      pollJob(data.job_id);
+    }
+
+    async function pollJob(jobId) {
+      const res = await fetch(`/api/jobs/${jobId}`);
+      if (!res.ok) {
+        statusEl.textContent = 'Failed to fetch job status.';
+        startBtn.disabled = false;
+        return;
+      }
+
+      const job = await res.json();
+      statusEl.textContent = `Mode: ${job.mode}\nStatus: ${job.status}\nProgress: ${job.done + job.failed}/${job.total}\nDone: ${job.done}\nFailed: ${job.failed}`;
+
+      outputsEl.innerHTML = '';
+      for (const url of job.outputs) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.textContent = url.split('/').pop();
+        outputsEl.appendChild(a);
+      }
+
+      if (job.status === 'completed' || job.status === 'failed') {
+        if (job.errors && job.errors.length) {
+          const pre = document.createElement('pre');
+          pre.className = 'status';
+          pre.textContent = 'Errors:\n' + job.errors.join('\n');
+          outputsEl.appendChild(pre);
+        }
+        startBtn.disabled = false;
+        return;
+      }
+
+      setTimeout(() => pollJob(jobId), 1200);
+    }
+
+    startBtn.addEventListener('click', startJob);
+  </script>
+</body>
+</html>

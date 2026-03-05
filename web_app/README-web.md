@@ -1,6 +1,6 @@
-# Easy IMG Studio (Web)
+# Easy IMG Studio
 
-Web-based version of your converter/enhancer app using FastAPI.
+Web-based version of Easy IMG Studio using FastAPI + Docker.
 
 ## Features
 
@@ -14,7 +14,7 @@ Web-based version of your converter/enhancer app using FastAPI.
 - Backend/API: `web_app/app/main.py`
 - Frontend UI: `web_app/app/static/index.html`
 - Docker image: `web_app/Dockerfile`
-- Compose file: `docker-compose.web.yml`
+- Compose file: `docker-compose.yml`
 
 ## Model Weights
 
@@ -47,7 +47,7 @@ Open:
 From project root:
 
 ```bash
-docker compose -f docker-compose.web.yml up --build
+docker compose up --build
 ```
 
 Open:

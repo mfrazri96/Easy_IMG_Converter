@@ -1,7 +1,7 @@
-# Easy IMG Converter
+# Easy IMG Studio
 
-A desktop image converter built with Python + Tkinter.
-Convert or enhance one image or many images in bulk, with live queue status and preview.
+Production-ready image conversion + Real-ESRGAN enhancement.
+This repository includes a desktop app (Tkinter) and a web app (FastAPI + Docker).
 
 ## Features
 
@@ -121,5 +121,12 @@ Easy IMG Converter/
   README.md
   tests/
     test_smoke.py
+  web_app/
+    app/
+      main.py
+      static/index.html
+    Dockerfile
+    requirements-web.txt
+    README-web.md
   Output/    # optional folder for exported files
 ```

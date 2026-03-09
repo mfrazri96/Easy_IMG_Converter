@@ -3,6 +3,7 @@ import shutil
 import threading
 import time
 import uuid
+import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -331,6 +332,7 @@ def get_job(job_id: str):
             "failed": job.failed,
             "errors": job.errors[-5:],
             "outputs": [f"/api/download/{job.id}/{name}" for name in job.outputs],
+            "download_all": f"/api/download-zip/{job.id}",
             "started_at": job.started_at,
             "finished_at": job.finished_at,
         }
@@ -342,6 +344,24 @@ def download_output(job_id: str, filename: str):
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(path=str(file_path), filename=filename)
+
+
+@app.get("/api/download-zip/{job_id}")
+def download_all_outputs(job_id: str):
+    output_dir = OUTPUT_DIR / job_id
+    if not output_dir.exists():
+        raise HTTPException(status_code=404, detail="Job output not found")
+
+    files = [p for p in output_dir.iterdir() if p.is_file() and p.name != "_all_outputs.zip"]
+    if not files:
+        raise HTTPException(status_code=404, detail="No output files for this job")
+
+    zip_path = output_dir / "_all_outputs.zip"
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for f in files:
+            zf.write(f, arcname=f.name)
+
+    return FileResponse(path=str(zip_path), filename=f"easy-img-studio-{job_id}.zip")
 
 
 # Mount static UI after API routes so /api/* doesn't get shadowed.

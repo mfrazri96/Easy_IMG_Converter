@@ -617,6 +617,29 @@
     .divider { height: 1px; background: var(--border); border: none; }
 
     .outputs { display: grid; gap: 8px; max-height: 200px; overflow: auto; }
+    .download-all-wrap { margin-top: 10px; margin-bottom: 8px; }
+    .download-all-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      min-height: 40px;
+      padding: 0 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-family: var(--mono);
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, var(--primary), #8f7bff);
+      border: 1px solid rgba(108,99,255,.45);
+      box-shadow: 0 8px 20px rgba(108,99,255,.25);
+      transition: .15s transform, .15s box-shadow;
+      width: fit-content;
+    }
+    .download-all-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(108,99,255,.35);
+    }
 
     .output-item {
       text-decoration: none;
@@ -788,6 +811,9 @@
           <pre class="terminal" id="statusLog">Awaiting job...</pre>
 
           <div class="hint">⬇ Output files appear below after completion.</div>
+          <div class="download-all-wrap">
+            <a id="downloadAllBtn" class="download-all-btn" href="#" download>⬇ Download All (.zip)</a>
+          </div>
 
           <div class="outputs" id="outputs"></div>
         </div>
@@ -809,6 +835,7 @@
     const clearBtn     = document.getElementById('clearBtn');
     const statusLog    = document.getElementById('statusLog');
     const outputsEl    = document.getElementById('outputs');
+    const downloadAllBtn = document.getElementById('downloadAllBtn');
     const statusBanner = document.getElementById('statusBanner');
     const statusText   = document.getElementById('statusText');
     const metricMode   = document.getElementById('metricMode');
@@ -873,6 +900,8 @@
 
       setBusy(true);
       outputsEl.innerHTML = '';
+      downloadAllBtn.style.display = 'none';
+      downloadAllBtn.removeAttribute('href');
       statusLog.textContent = 'Submitting job…';
       metricMode.textContent = currentMode;
       metricProgress.textContent = `0 / ${files.length}`;
@@ -931,6 +960,14 @@ Failed  : ${job.failed}`;
           a.className = 'output-item';
           a.innerHTML = `<span>${url.split('/').pop()}</span><strong>↓ Download</strong>`;
           outputsEl.appendChild(a);
+        }
+
+        if (job.outputs?.length && job.download_all) {
+          downloadAllBtn.href = job.download_all;
+          downloadAllBtn.style.display = 'inline-flex';
+        } else {
+          downloadAllBtn.style.display = 'none';
+          downloadAllBtn.removeAttribute('href');
         }
 
         if (job.errors?.length) {

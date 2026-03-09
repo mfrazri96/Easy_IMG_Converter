@@ -2,6 +2,7 @@ fastapi==0.111.1
 uvicorn[standard]==0.30.3
 python-multipart==0.0.9
 pillow==10.4.0
+pillow-heif==0.17.0
 opencv-python==4.10.0.84
 numpy<2
 torch==2.0.1

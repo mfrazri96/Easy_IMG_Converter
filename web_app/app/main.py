@@ -12,6 +12,10 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
+try:
+    from pillow_heif import register_heif_opener
+except Exception:
+    register_heif_opener = None
 
 try:
     from realesrgan import RealESRGANer
@@ -29,6 +33,9 @@ MODEL_DIRS = [Path.cwd() / "Model", Path.cwd() / "weights"]
 
 for d in (INPUT_DIR, OUTPUT_DIR):
     d.mkdir(parents=True, exist_ok=True)
+
+if register_heif_opener is not None:
+    register_heif_opener()
 
 FORMAT_MAP = {
     "png": ("PNG", ".png"),

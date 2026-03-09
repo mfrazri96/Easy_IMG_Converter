@@ -5,6 +5,7 @@ Web-based version of Easy IMG Studio using FastAPI + Docker.
 ## Features
 
 - Convert image formats (single or bulk)
+- HEIC/HEIF input support (with `pillow-heif`)
 - Enhance images using Real-ESRGAN models
 - Browser UI with job polling and output download links
 - Docker deployment support

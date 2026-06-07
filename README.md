@@ -215,3 +215,5 @@ Easy IMG Converter/
     README-web.md
   Output/    # optional folder for exported files
 ```
+
+Developed by: Faizs Azri
